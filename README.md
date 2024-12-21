@@ -16,7 +16,7 @@ This is a fully self-contained example script of a FastAPI server that uses `mem
 2. Save the code in a file called `memory_api.py`.
 3. Run the server:
    ```bash
-   uvicorn memory_api:app --reload
+   uvicorn main:app --reload
    ```
    
 4. The API is available at `http://127.0.0.1:8000`.
