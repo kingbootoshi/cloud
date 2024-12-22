@@ -10,45 +10,35 @@ from pydantic import BaseModel
 from mem0 import Memory
 from neo4j import GraphDatabase
 
-# Create logs directory if it doesn't exist
-os.makedirs('logs', exist_ok=True)
-
-# Configure logging with a process-safe approach
 def setup_logger():
     """Configure logging with proper process safety for multiple workers"""
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.INFO)
-    
-    # Clear any existing handlers
+
     if logger.hasHandlers():
         logger.handlers.clear()
-    
-    # Console handler
+
     console_handler = logging.StreamHandler()
     console_handler.setLevel(logging.INFO)
     console_formatter = logging.Formatter('%(asctime)s - %(process)d - %(levelname)s - %(message)s')
     console_handler.setFormatter(console_formatter)
-    
-    # File handler with rotation (process-safe)
+
     file_handler = RotatingFileHandler(
         filename=f'logs/api.log',
-        maxBytes=10*1024*1024,  # 10MB
+        maxBytes=10*1024*1024,
         backupCount=5,
         delay=True
     )
     file_handler.setLevel(logging.INFO)
     file_formatter = logging.Formatter('%(asctime)s - %(process)d - %(levelname)s - %(message)s')
     file_handler.setFormatter(file_formatter)
-    
-    # Add handlers to logger
+
     logger.addHandler(console_handler)
     logger.addHandler(file_handler)
-    
+
     return logger
 
-# Initialize the logger
 logger = setup_logger()
-
 load_dotenv()
 
 def init_neo4j_database():
@@ -64,7 +54,6 @@ def init_neo4j_database():
         driver = GraphDatabase.driver(uri, auth=(username, password))
         
         def check_schema_exists(tx):
-            # Check if our schema version exists
             result = tx.run("""
                 MATCH (schema:Schema {version: 'v1'})
                 RETURN schema IS NOT NULL as exists
@@ -72,18 +61,15 @@ def init_neo4j_database():
             return result.single()['exists']
 
         def init_schema(tx):
-            # Create constraints and indexes if they don't exist
             constraints = [
                 "CREATE CONSTRAINT IF NOT EXISTS FOR (n:Memory) REQUIRE n.id IS UNIQUE",
                 "CREATE CONSTRAINT IF NOT EXISTS FOR (n:Memory) REQUIRE n.user_id IS NOT NULL",
                 "CREATE INDEX IF NOT EXISTS FOR (n:Memory) ON (n.embedding)",
                 "CREATE INDEX IF NOT EXISTS FOR (n:Memory) ON (n.user_id)",
             ]
-            
             for constraint in constraints:
                 tx.run(constraint)
 
-            # Create schema version marker
             tx.run("""
                 CREATE (schema:Schema {
                     version: 'v1',
@@ -93,9 +79,7 @@ def init_neo4j_database():
             """)
 
         with driver.session() as session:
-            # First check if schema exists
             schema_exists = session.execute_read(check_schema_exists)
-            
             if not schema_exists:
                 logger.info("Initializing Neo4j schema for first time setup...")
                 session.execute_write(init_schema)
@@ -105,7 +89,6 @@ def init_neo4j_database():
         
         driver.close()
         return True
-    
     except Exception as e:
         logger.error(f"Error initializing Neo4j database: {str(e)}")
         return False
@@ -153,7 +136,6 @@ MANDATORY OUTPUT:
 {{"facts": ["fact 1", "fact 2", "..."]}}
 """
 
-# mem0 configuration from your original approach
 config = {
     "graph_store": {
         "provider": "neo4j",
@@ -183,13 +165,10 @@ config = {
     "version": "v1.1"
 }
 
-# Initialize Neo4j database before starting the application
 if not init_neo4j_database():
     raise Exception("Failed to initialize Neo4j database. Please check your connection and credentials.")
 
-# Initialize mem0 memory instance
 memory_instance = Memory.from_config(config_dict=config)
-
 app = FastAPI()
 
 class MessageEntry(BaseModel):
@@ -201,7 +180,6 @@ class AddRequest(BaseModel):
     agent_id: str
     user_id: str
     metadata: Optional[Dict[str, Any]] = None
-    infer: Optional[bool] = True
 
 class QueryRequest(BaseModel):
     query: str
@@ -213,17 +191,19 @@ class GetAllRequest(BaseModel):
     agent_id: Optional[str] = None
     user_id: Optional[str] = None
 
+@app.get("/ping")
+def ping():
+    """A simple ping endpoint to verify that the server is running."""
+    return {"status": "ok", "message": "Memory server is up and running!"}
+
 @app.post("/add")
 def add_memory(req: AddRequest):
-    """Add memories to mem0."""
     try:
-        # Detailed request logging
         request_details = {
             "endpoint": "/add",
             "agent_id": req.agent_id,
             "user_id": req.user_id,
             "metadata": req.metadata,
-            "infer": req.infer,
             "message_count": len(req.messages),
             "messages": [
                 {
@@ -234,18 +214,18 @@ def add_memory(req: AddRequest):
         }
         logger.info(f"Incoming POST request to /add: {json.dumps(request_details, indent=2)}")
         
+        # Convert MessageEntry objects to dictionaries
+        messages_dict = [{"role": msg.role, "content": msg.content} for msg in req.messages]
+        
         start_time = datetime.now()
         response = memory_instance.add(
-            req.messages,
+            messages_dict,  # Pass the converted dictionary list instead of MessageEntry objects
             agent_id=req.agent_id,
             user_id=req.user_id,
             metadata=req.metadata if req.metadata else {},
-            infer=req.infer
         )
-        
         execution_time = (datetime.now() - start_time).total_seconds()
         
-        # Detailed response logging
         response_details = {
             "execution_time_seconds": execution_time,
             "status": "success",
@@ -260,9 +240,7 @@ def add_memory(req: AddRequest):
 
 @app.post("/query")
 def query_memory(req: QueryRequest):
-    """Query memories from mem0."""
     try:
-        # Detailed request logging
         request_details = {
             "endpoint": "/query",
             "query": req.query,
@@ -284,7 +262,6 @@ def query_memory(req: QueryRequest):
         result = memory_instance.search(req.query, **kwargs)
         execution_time = (datetime.now() - start_time).total_seconds()
         
-        # Detailed response logging
         response_details = {
             "execution_time_seconds": execution_time,
             "results_count": len(result),
@@ -299,9 +276,7 @@ def query_memory(req: QueryRequest):
 
 @app.post("/get_all")
 def get_all_memories(req: GetAllRequest):
-    """Get all memories filtered by agent_id and/or user_id."""
     try:
-        # Detailed request logging
         request_details = {
             "endpoint": "/get_all",
             "agent_id": req.agent_id,
@@ -319,7 +294,6 @@ def get_all_memories(req: GetAllRequest):
         result = memory_instance.get_all(**kwargs)
         execution_time = (datetime.now() - start_time).total_seconds()
         
-        # Detailed response logging
         response_details = {
             "execution_time_seconds": execution_time,
             "memories_count": len(result),
@@ -332,10 +306,8 @@ def get_all_memories(req: GetAllRequest):
         logger.error(f"Error getting all memories: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
-# Add startup event handler to log application startup
 @app.on_event("startup")
 async def startup_event():
-    """Log application startup and configuration"""
     logger.info(f"Starting Memory API service - Process ID: {os.getpid()}")
     logger.info(f"Neo4j URI: {os.getenv('NEO4J_URI')}")
     logger.info(f"Qdrant URL: {os.getenv('QDRANT_URL')}")
