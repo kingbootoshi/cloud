@@ -514,13 +514,10 @@ class MemoryGraph:
 
     def _make_filter_params(self, filters):
         """
-        Return a dict of {user_id: val, agent_id: val, run_id: val} if present.
+        Always provide user_id, agent_id, run_id as None if not present, to avoid parameter missing errors.
         """
-        params = {}
-        if "user_id" in filters:
-            params["user_id"] = filters["user_id"]
-        if "agent_id" in filters:
-            params["agent_id"] = filters["agent_id"]
-        if "run_id" in filters:
-            params["run_id"] = filters["run_id"]
-        return params
+        return {
+            "user_id": filters.get("user_id", None),
+            "agent_id": filters.get("agent_id", None),
+            "run_id": filters.get("run_id", None),
+        }

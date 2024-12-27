@@ -44,6 +44,6 @@ m = Memory.from_config(config_dict=config)
 m.reset() # Wipes vector DB
 
 # Delete_all must be used to wipe the knowledge graph DB
-m.delete_all(user_id="test_user", agent_id="test_agent", run_id="test_run")
+m.delete_all(agent_id="test_agent", run_id="test_run")
 
 print("Memory wiped successfully")

@@ -291,7 +291,7 @@ try:
     logger.info("Starting test memory addition process")
     test_memory_string = format_memories(test_memories)
     logger.debug(f"Formatted test memories: {test_memory_string}")
-    test_result = m.add(test_memory_string, user_id="test_user", agent_id="test_agent", run_id="test_run")
+    test_result = m.add(test_memory_string, agent_id="test_agent", run_id="test_run")
     logger.info(f"Added test memories successfully: {test_result}")
 
 except Exception as e:

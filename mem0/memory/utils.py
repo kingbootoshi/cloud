@@ -10,6 +10,12 @@ def get_fact_retrieval_messages(message):
 def parse_messages(messages):
     response = ""
     for msg in messages:
+        # Handle string messages
+        if isinstance(msg, str):
+            response += f"user: {msg}\n"
+            continue
+            
+        # Handle dictionary messages
         if msg["role"] == "system":
             response += f"system: {msg['content']}\n"
         if msg["role"] == "user":

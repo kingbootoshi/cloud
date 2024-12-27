@@ -117,9 +117,10 @@ memory_instance = Memory.from_config(config_dict=config)
 app = FastAPI()
 
 class AddRequest(BaseModel):
-    memories: List[str]
-    agent_id: str
-    run_id: str
+    # Support a single string of memories
+    memories: str
+    agent_id: Optional[str] = None
+    run_id: Optional[str] = None
     user_id: Optional[str] = None
     metadata: Optional[Dict[str, Any]] = None
 
@@ -145,9 +146,9 @@ def add_memory(req: AddRequest):
     """
     Expects:
     {
-      "memories": ["some memory string", ...],
+      "memories": "combined memory string",
       "agent_id": "quest_boo",
-      "run_id": "general_knowledge" (or similar),
+      "run_id": "general_knowledge",
       "user_id": "123" (optional),
       "metadata": { ... } (optional)
     }
@@ -159,13 +160,12 @@ def add_memory(req: AddRequest):
             "run_id": req.run_id,
             "user_id": req.user_id,
             "metadata": req.metadata,
-            "memories_count": len(req.memories),
-            "memories_preview": [m[:40] for m in req.memories]
+            "memories_count": 1,
+            "memories_preview": [req.memories[:40]]
         }
         logger.info(f"Incoming POST request to /add: {json.dumps(request_details, indent=2)}")
 
         start_time = datetime.now()
-        # Call memory_instance.add with raw string array, passing run_id as the category
         response = memory_instance.add(
             req.memories,
             agent_id=req.agent_id,
@@ -278,6 +278,7 @@ def get_all_memories(req: GetAllRequest):
     except Exception as e:
         logger.error(f"Error getting all memories: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
+
 @app.on_event("startup")
 async def startup_event():
     logger.info(f"Starting Memory API service - Process ID: {os.getpid()}")
