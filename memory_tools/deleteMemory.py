@@ -32,7 +32,7 @@ config = {
     "vector_store": {
         "provider": "qdrant",
             "config": {
-                "collection_name": "cloud_memory",
+                "collection_name": "test_memory",
                 "url": os.getenv("QDRANT_URL"),
                 "api_key": os.getenv("QDRANT_API_KEY"),
             },
@@ -44,6 +44,8 @@ m = Memory.from_config(config_dict=config)
 m.reset() # Wipes vector DB
 
 # Delete_all must be used to wipe the knowledge graph DB
-m.delete_all(agent_id="test_agent", run_id="test_run")
+
+# Delete only the agent
+m.delete_all(agent_id="test_agent")
 
 print("Memory wiped successfully")

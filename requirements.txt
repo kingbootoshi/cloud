@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+mem0
+python-dotenv
+neo4j
+qdrant-client
+openai
+requests

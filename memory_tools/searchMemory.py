@@ -35,9 +35,9 @@ config = {
 # Initialize memory
 m = Memory.from_config(config_dict=config)
 
-search_query = "op_cat"
+search_query = "<@1074617018218717204> tell me about discord"
 
 # Perform the get_all with metadata filter
-results = m.search(search_query, user_id="test_user", agent_id="test_agent", run_id="test_run")
+results = m.search(search_query, agent_id="quest_boo", run_id="general_knowledge")
 
 print(f"Search results for query {search_query}: {results}")

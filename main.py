@@ -211,13 +211,13 @@ def query_memory(req: QueryRequest):
         logger.info(f"Incoming POST request to /query: {json.dumps(request_details, indent=2)}")
 
         kwargs = {}
-        if req.agent_id:
+        if req.agent_id is not None:
             kwargs["agent_id"] = req.agent_id
-        if req.run_id:
+        if req.run_id is not None:
             kwargs["run_id"] = req.run_id
-        if req.user_id:
+        if req.user_id is not None:
             kwargs["user_id"] = req.user_id
-        if req.limit:
+        if req.limit is not None:
             kwargs["limit"] = req.limit
 
         start_time = datetime.now()
