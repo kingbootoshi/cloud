@@ -1,1 +1,0 @@
-make the tools a CLI that enables more flexibility in agent_id, users, memories added, erased, search etc for testing.

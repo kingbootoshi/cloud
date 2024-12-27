@@ -1,5 +1,7 @@
 This is a fully self-contained example script of a FastAPI server that uses `mem0` to store and retrieve memories. It references the kind of configuration you used in your original code (Neo4j for graph_store and Qdrant for vector_store) and provides three endpoints: `/add`, `/query`, and `/get_all`. 
 
+The mem0 package included in this repo is a modified version of the mem0 package from the [mem0ai](https://github.com/mem0ai/mem0) repo.
+
 **What this code does:**  
 - It sets up a FastAPI application and initializes a `Memory` instance from `mem0` using a configuration similar to what you described.
 - `/add` allows you to add memories by passing an array of messages (each with `role` and `content`) plus `agent_id`, `user_id`, and optional `metadata`.

@@ -1,5 +1,6 @@
 import os
-from mem0 import Memory
+import sys
+from pathlib import Path
 from dotenv import load_dotenv
 import logging
 from datetime import datetime
@@ -7,6 +8,11 @@ import asyncio
 from functools import partial
 import re
 from typing import Dict, Any
+
+# Add the project root to Python path
+sys.path.append(str(Path(__file__).parent.parent))
+
+from mem0 import Memory
 
 # ONLY RUN THIS SCRIPT WHEN YOU WANT TO COMPLETELY WIPE THE MEMORY STORE
 
@@ -30,22 +36,14 @@ config = {
                 "url": os.getenv("QDRANT_URL"),
                 "api_key": os.getenv("QDRANT_API_KEY"),
             },
-            "llm": {
-                "provider": "openai",
-                "config": {
-                    "model": "gpt-4o",
-                    "temperature": .3,
-                    "max_tokens": 1000,
-                }
-            },
     },
     "version": "v1.1"
 }
 
 m = Memory.from_config(config_dict=config)
-m.reset()
+m.reset() # Wipes vector DB
 
-# Delete special categories
-m.delete_all(user_id="test", agent_id="test")
+# Delete_all must be used to wipe the knowledge graph DB
+m.delete_all(user_id="test_user", agent_id="test_agent", run_id="test_run")
 
 print("Memory wiped successfully")

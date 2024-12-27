@@ -1,4 +1,6 @@
 import os
+import sys
+from pathlib import Path
 import json
 import logging
 from logging.handlers import RotatingFileHandler
@@ -7,8 +9,12 @@ from datetime import datetime, UTC
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from mem0 import Memory
 from neo4j import GraphDatabase
+
+# Add the project root to Python path
+sys.path.append(str(Path(__file__).parent))
+
+from mem0 import Memory
 
 def setup_logger():
     """Configure logging with proper process safety for multiple workers"""
@@ -24,7 +30,7 @@ def setup_logger():
     console_handler.setFormatter(console_formatter)
 
     file_handler = RotatingFileHandler(
-        filename=f'logs/api.log',
+        filename='logs/api.log',
         maxBytes=10*1024*1024,
         backupCount=5,
         delay=True
@@ -39,59 +45,8 @@ def setup_logger():
     return logger
 
 logger = setup_logger()
+
 load_dotenv()
-
-def init_neo4j_database():
-    """
-    Initialize Neo4j database with required schema and constraints.
-    Only creates schema if it doesn't already exist.
-    """
-    uri = os.getenv("NEO4J_URI")
-    username = os.getenv("NEO4J_USERNAME")
-    password = os.getenv("NEO4J_PASSWORD")
-
-    try:
-        driver = GraphDatabase.driver(uri, auth=(username, password))
-        
-        def check_schema_exists(tx):
-            result = tx.run("""
-                MATCH (schema:Schema {version: 'v1'})
-                RETURN schema IS NOT NULL as exists
-            """)
-            return result.single()['exists']
-
-        def init_schema(tx):
-            constraints = [
-                "CREATE CONSTRAINT IF NOT EXISTS FOR (n:Memory) REQUIRE n.id IS UNIQUE",
-                "CREATE CONSTRAINT IF NOT EXISTS FOR (n:Memory) REQUIRE n.user_id IS NOT NULL",
-                "CREATE INDEX IF NOT EXISTS FOR (n:Memory) ON (n.embedding)",
-                "CREATE INDEX IF NOT EXISTS FOR (n:Memory) ON (n.user_id)",
-            ]
-            for constraint in constraints:
-                tx.run(constraint)
-
-            tx.run("""
-                CREATE (schema:Schema {
-                    version: 'v1',
-                    created_at: datetime(),
-                    properties: ['embedding', 'user_id', 'agent_id', 'content', 'metadata']
-                })
-            """)
-
-        with driver.session() as session:
-            schema_exists = session.execute_read(check_schema_exists)
-            if not schema_exists:
-                logger.info("Initializing Neo4j schema for first time setup...")
-                session.execute_write(init_schema)
-                logger.info("Neo4j schema initialized successfully")
-            else:
-                logger.info("Neo4j schema already exists, skipping initialization")
-        
-        driver.close()
-        return True
-    except Exception as e:
-        logger.error(f"Error initializing Neo4j database: {str(e)}")
-        return False
 
 custom_prompt = """
 You are a Personal Information Organizer, specialized in accurately storing facts, user memories, and preferences. Your primary role is to extract relevant pieces of information from conversations and organize them into distinct, manageable facts. This allows for easy retrieval and personalization in future interactions. Below are the types of information you need to focus on and the detailed instructions on how to handle the input data.
@@ -136,6 +91,7 @@ MANDATORY OUTPUT:
 {{"facts": ["fact 1", "fact 2", "..."]}}
 """
 
+# Initialize configurations for the memory system
 config = {
     "graph_store": {
         "provider": "neo4j",
@@ -152,43 +108,31 @@ config = {
             "url": os.getenv("QDRANT_URL"),
             "api_key": os.getenv("QDRANT_API_KEY"),
         },
-        "llm": {
-            "provider": "openai",
-            "config": {
-                "model": "gpt-4o-mini",
-                "temperature": 0.3,
-                "max_tokens": 1000
-            }
-        }
     },
     "custom_prompt": custom_prompt,
     "version": "v1.1"
 }
 
-if not init_neo4j_database():
-    raise Exception("Failed to initialize Neo4j database. Please check your connection and credentials.")
-
 memory_instance = Memory.from_config(config_dict=config)
 app = FastAPI()
 
-class MessageEntry(BaseModel):
-    role: str
-    content: str
-
 class AddRequest(BaseModel):
-    messages: List[MessageEntry]
+    memories: List[str]
     agent_id: str
-    user_id: str
+    run_id: str
+    user_id: Optional[str] = None
     metadata: Optional[Dict[str, Any]] = None
 
 class QueryRequest(BaseModel):
     query: str
     agent_id: Optional[str] = None
+    run_id: Optional[str] = None
     user_id: Optional[str] = None
     limit: Optional[int] = 10
 
 class GetAllRequest(BaseModel):
     agent_id: Optional[str] = None
+    run_id: Optional[str] = None
     user_id: Optional[str] = None
 
 @app.get("/ping")
@@ -198,41 +142,46 @@ def ping():
 
 @app.post("/add")
 def add_memory(req: AddRequest):
+    """
+    Expects:
+    {
+      "memories": ["some memory string", ...],
+      "agent_id": "quest_boo",
+      "run_id": "general_knowledge" (or similar),
+      "user_id": "123" (optional),
+      "metadata": { ... } (optional)
+    }
+    """
     try:
         request_details = {
             "endpoint": "/add",
             "agent_id": req.agent_id,
+            "run_id": req.run_id,
             "user_id": req.user_id,
             "metadata": req.metadata,
-            "message_count": len(req.messages),
-            "messages": [
-                {
-                    "role": msg.role,
-                    "content_length": len(msg.content)
-                } for msg in req.messages
-            ]
+            "memories_count": len(req.memories),
+            "memories_preview": [m[:40] for m in req.memories]
         }
         logger.info(f"Incoming POST request to /add: {json.dumps(request_details, indent=2)}")
-        
-        # Convert MessageEntry objects to dictionaries
-        messages_dict = [{"role": msg.role, "content": msg.content} for msg in req.messages]
-        
+
         start_time = datetime.now()
+        # Call memory_instance.add with raw string array, passing run_id as the category
         response = memory_instance.add(
-            messages_dict,  # Pass the converted dictionary list instead of MessageEntry objects
+            req.memories,
             agent_id=req.agent_id,
             user_id=req.user_id,
+            run_id=req.run_id,
             metadata=req.metadata if req.metadata else {},
         )
         execution_time = (datetime.now() - start_time).total_seconds()
-        
+
         response_details = {
             "execution_time_seconds": execution_time,
             "status": "success",
             "response": response
         }
         logger.info(f"Response from /add: {json.dumps(response_details, indent=2)}")
-        
+
         return {"status": "success", "result": response}
     except Exception as e:
         logger.error(f"Error adding memory: {str(e)}", exc_info=True)
@@ -240,19 +189,32 @@ def add_memory(req: AddRequest):
 
 @app.post("/query")
 def query_memory(req: QueryRequest):
+    """
+    Expects:
+    {
+      "query": "...",
+      "agent_id": "quest_boo" (optional),
+      "run_id": "general_knowledge" (optional),
+      "user_id": "123" (optional),
+      "limit": 5 (optional)
+    }
+    """
     try:
         request_details = {
             "endpoint": "/query",
             "query": req.query,
             "agent_id": req.agent_id,
+            "run_id": req.run_id,
             "user_id": req.user_id,
             "limit": req.limit
         }
         logger.info(f"Incoming POST request to /query: {json.dumps(request_details, indent=2)}")
-        
+
         kwargs = {}
         if req.agent_id:
             kwargs["agent_id"] = req.agent_id
+        if req.run_id:
+            kwargs["run_id"] = req.run_id
         if req.user_id:
             kwargs["user_id"] = req.user_id
         if req.limit:
@@ -261,14 +223,14 @@ def query_memory(req: QueryRequest):
         start_time = datetime.now()
         result = memory_instance.search(req.query, **kwargs)
         execution_time = (datetime.now() - start_time).total_seconds()
-        
+
         response_details = {
             "execution_time_seconds": execution_time,
             "results_count": len(result),
             "results": result
         }
         logger.info(f"Response from /query: {json.dumps(response_details, indent=2)}")
-        
+
         return {"status": "success", "results": result}
     except Exception as e:
         logger.error(f"Error querying memory: {str(e)}", exc_info=True)
@@ -276,36 +238,46 @@ def query_memory(req: QueryRequest):
 
 @app.post("/get_all")
 def get_all_memories(req: GetAllRequest):
+    """
+    Expects:
+    {
+      "agent_id": "quest_boo" (optional),
+      "run_id": "self_knowledge" (optional),
+      "user_id": "123" (optional)
+    }
+    """
     try:
         request_details = {
             "endpoint": "/get_all",
             "agent_id": req.agent_id,
+            "run_id": req.run_id,
             "user_id": req.user_id
         }
         logger.info(f"Incoming POST request to /get_all: {json.dumps(request_details, indent=2)}")
-        
+
         kwargs = {}
         if req.agent_id:
             kwargs["agent_id"] = req.agent_id
+        if req.run_id:
+            kwargs["run_id"] = req.run_id
         if req.user_id:
             kwargs["user_id"] = req.user_id
 
         start_time = datetime.now()
         result = memory_instance.get_all(**kwargs)
         execution_time = (datetime.now() - start_time).total_seconds()
-        
+
         response_details = {
             "execution_time_seconds": execution_time,
             "memories_count": len(result),
             "results": result
         }
         logger.info(f"Response from /get_all: {json.dumps(response_details, indent=2)}")
-        
+
         return {"status": "success", "results": result}
     except Exception as e:
         logger.error(f"Error getting all memories: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
-
 @app.on_event("startup")
 async def startup_event():
     logger.info(f"Starting Memory API service - Process ID: {os.getpid()}")
