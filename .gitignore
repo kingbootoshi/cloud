@@ -3,3 +3,7 @@ pycache
 .DS_Store
 __pycache__
 logs
+fly.toml
+Dockerfile
+.dockerignore
+.github
