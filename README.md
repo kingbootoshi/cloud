@@ -1,4 +1,4 @@
-# CLOUD MEMORIES - An Advanced AI Memory Server
+# Cloud - An Advanced AI Memory Server
 
 ![S7_bLThYdqvBzEbyyXJUb_3f419c2882044d539687769758c7b919](https://github.com/user-attachments/assets/b047961a-ba1f-41bd-90dc-c407549a1fb9)
 
