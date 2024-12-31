@@ -1,3 +1,7 @@
+# CLOUD MEMORIES - An Advanced AI Memory Server
+
+![S7_bLThYdqvBzEbyyXJUb_3f419c2882044d539687769758c7b919](https://github.com/user-attachments/assets/b047961a-ba1f-41bd-90dc-c407549a1fb9)
+
 This is a customized mem0 server that uses Neo4j for graph_store and Qdrant for vector_store. This acts as the central memory hub for all of your AI agents.
 
 The mem0 package included in this repo is a modified version of the mem0 package from the [mem0ai](https://github.com/mem0ai/mem0) repo.
