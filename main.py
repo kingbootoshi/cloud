@@ -7,7 +7,7 @@ from logging.handlers import RotatingFileHandler
 from typing import Any, Dict, List, Optional
 from datetime import datetime, UTC
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Header, Depends
 from pydantic import BaseModel
 from neo4j import GraphDatabase
 
@@ -17,7 +17,7 @@ sys.path.append(str(Path(__file__).parent))
 from mem0 import Memory
 
 def setup_logger():
-    """Configure logging with proper process safety for multiple workers"""
+    """Configure logging with proper process safety for multiple workers."""
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.INFO)
 
@@ -47,6 +47,13 @@ def setup_logger():
 logger = setup_logger()
 
 load_dotenv()
+
+# A simple password check using an HTTP header
+def verify_password(x_password: Optional[str] = Header(None)):
+    expected_password = os.getenv("CLOUD_API_KEY")
+    if not x_password or x_password != expected_password:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    return x_password
 
 custom_prompt = """
 You are a Personal Information Organizer, specialized in accurately storing facts, user memories, and preferences. Your primary role is to extract relevant pieces of information from conversations and organize them into distinct, manageable facts. This allows for easy retrieval and personalization in future interactions. Below are the types of information you need to focus on and the detailed instructions on how to handle the input data.
@@ -117,7 +124,6 @@ memory_instance = Memory.from_config(config_dict=config)
 app = FastAPI()
 
 class AddRequest(BaseModel):
-    # Support a single string of memories
     memories: str
     agent_id: Optional[str] = None
     run_id: Optional[str] = None
@@ -142,7 +148,7 @@ def ping():
     return {"status": "ok", "message": "Memory server is up and running!"}
 
 @app.post("/add")
-def add_memory(req: AddRequest):
+def add_memory(req: AddRequest, x_password: str = Depends(verify_password)):
     """
     Expects:
     {
@@ -188,7 +194,7 @@ def add_memory(req: AddRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/query")
-def query_memory(req: QueryRequest):
+def query_memory(req: QueryRequest, x_password: str = Depends(verify_password)):
     """
     Expects:
     {
@@ -237,7 +243,7 @@ def query_memory(req: QueryRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/get_all")
-def get_all_memories(req: GetAllRequest):
+def get_all_memories(req: GetAllRequest, x_password: str = Depends(verify_password)):
     """
     Expects:
     {

@@ -24,25 +24,26 @@ How we treat mem0 functions:
    ```bash
    pip install fastapi uvicorn mem0 python-dotenv neo4j qdrant-client openai requests
    ```
-   Make sure you have environment variables set for your Neo4j and Qdrant instances (`NEO4J_URI`, `NEO4J_USERNAME`, `NEO4J_PASSWORD`, `QDRANT_URL`, `QDRANT_API_KEY`, and `OPENAI_API_KEY` if needed). You can store them in a `.env` file.
+   Make sure you have environment variables set for your Neo4j and Qdrant instances (`NEO4J_URI`, `NEO4J_USERNAME`, `NEO4J_PASSWORD`, `QDRANT_URL`, `QDRANT_API_KEY`, and `OPENAI_API_KEY` if needed). You can store them in a `.env` file, also including `CLOUD_PASSWORD` for your API password.
    
 2. Save the code in a file called `main.py`.
 3. Run the server:
    ```bash
    uvicorn main:app --reload
    ```
-   
 4. The API is available at `http://127.0.0.1:8000`.
 
+**Authentication**  
+- Every endpoint except `/ping` requires a header named **`X-Password`**.  
+- The value must match `CLOUD_PASSWORD` from your `.env` file.
 
 **Example Usage:**
-
-Here's an example of how to use each endpoint:
 
 1. Adding Memories (`/add`):
 ```bash
 curl -X POST "http://127.0.0.1:8000/add" \
 -H "Content-Type: application/json" \
+-H "X-Password: supersecret" \
 -d '{
     "memories": "The user enjoys programming in Python and has been coding for 5 years",
     "agent_id": "assistant_1",
@@ -59,6 +60,7 @@ curl -X POST "http://127.0.0.1:8000/add" \
 ```bash
 curl -X POST "http://127.0.0.1:8000/query" \
 -H "Content-Type: application/json" \
+-H "X-Password: supersecret" \
 -d '{
     "query": "What does the user like to program in?",
     "agent_id": "assistant_1",
@@ -72,6 +74,7 @@ curl -X POST "http://127.0.0.1:8000/query" \
 ```bash
 curl -X POST "http://127.0.0.1:8000/get_all" \
 -H "Content-Type: application/json" \
+-H "X-Password: supersecret" \
 -d '{
     "agent_id": "assistant_1",
     "run_id": "user_specific",
