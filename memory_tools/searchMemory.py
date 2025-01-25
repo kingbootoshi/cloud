@@ -24,7 +24,7 @@ config = {
     "vector_store": {
         "provider": "qdrant",
         "config": {
-            "collection_name": "cloud_memory",
+            "collection_name": "test_memory",
             "url": os.getenv("QDRANT_URL"),
             "api_key": os.getenv("QDRANT_API_KEY"),
         },
@@ -35,9 +35,11 @@ config = {
 # Initialize memory
 m = Memory.from_config(config_dict=config)
 
-search_query = "<@1074617018218717204> tell me about discord"
+search_query = "Behind a majestic waterfall deeply nestled"
 
 # Perform the get_all with metadata filter
-results = m.search(search_query, agent_id="quest_boo", run_id="general_knowledge")
+results = m.search(search_query, agent_id="test_agent", run_id="test_run", user_id="test_user")
+all_results = m.get_all(agent_id="test_agent", run_id="test_run", user_id="test_user")
 
 print(f"Search results for query {search_query}: {results}")
+print(f"All results: {all_results}")

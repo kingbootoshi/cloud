@@ -274,11 +274,25 @@ logger.info("Memory system initialized.")
 
 # Define the memories for each category
 test_memories = [
-    "OP_CAT was a Bitcoin Script opcode used for data concatenation and was disabled for security reasons in 2010",
-    "Taproot Wizards advocate for reactivating OP_CAT to expand Bitcoins capabilities",
-    "Boos are distinguished from ghosts in the Boo Kingdom",
-    "Liverpool is a football team regarded by some as the best in the world",
-    "In the spirit realm, pastimes can include practicing shadow magic, chasing ethereal butterflies, and having floating tea parties",
+    """Behind a majestic waterfall deeply nestled in the forest outside of the Boo Kingdom is a hidden cave accommodating a miniature replica of the castle grounds. This is where :Boo39FairyBoo: Fairy Boo resides and operates the crucial veins that give the blockchain its magical elements.
+
+At a certain point these veins also provided the necessary defined-blocks required for leylines to carry magic to the cursed landchain, but since that region had become dormant, Fairy Boo's primary focus has been on keeping his home kingdom seething with positive arcane through means of spellbinding.
+
+As fickle as a feather and more elusive than a shadow, not many have had the honor of meeting this magical Boo. The majority of the Boo nation even doubt his very existence, only speaking of myths and legends detailing vague sightings of his sparkling tincture and the might of his presence. To most, Fairy Boo is a glimpse in the forest at night or a bright shining pixel hanging very low in the atmosphere.
+
+Those that know of him desperately seek him out for his skills to install power onto their mundane objects and weapons, but he is a difficult fairy to find and even the other fairies swarm him when he makes a scarce appearance.
+
+He often writes to his close friend, :Boo83ElvenBoo: Elven Boo, as they have similar codes in their origins and get along extremely well. Most of their conversation topics are just troublesome as they construct comical rumors about the other Boos to cause drama for their own entertainment.
+
+Other than the occasional cordial messages and brief letters to the Boo King, there's not much contact Fairy has with the general Boo populace. However, he would not have it any other way, because of his deeply rooted fears of becoming too attached to other people and things.
+
+In addition, Fairy Boo seldom travels to the public blocks, not only because the bland textures cannot withstand his mystic aura, but because he finds the true kingdom, despite its evident brilliance, somewhat dull in contrast to his spectral home bustling with his favorite tunes.
+
+When he needs to attend meetings in the castle, he shrinks himself to a grain barely visible, equips his earpods and cautiously avoids any run-ins with the other Boos. This further strengthens the myth of his continuation, though his introverted nature embraces such hearsay, it ultimately grants him his solitude.
+
+Fairy Boo loves his role in the blockchain and strives only to generate MORE enchants to embellish weapons, objects, and even Boo's themselves with magical properties. The mysterious energies that he discovered through utilizing a gleaming crystal etched with intricate patterns is arguably the very lifeblood of many satoshis.
+
+Furthermore, Fairy Boo is not opposed to having a laugh and often uses his magic to mess with the other Boos. Besides the trickery he enjoys, he finds nath else comparable to the beauty of a powerful cast and successful blast delivered to the enemies."""
 ]
 
 # Function to format memories as a single string
@@ -291,7 +305,7 @@ try:
     logger.info("Starting test memory addition process")
     test_memory_string = format_memories(test_memories)
     logger.debug(f"Formatted test memories: {test_memory_string}")
-    test_result = m.add(test_memory_string, user_id="test_user", agent_id="test_agent", run_id="test_run")
+    test_result = m.add(test_memory_string, user_id="test_user", agent_id="test_agent", run_id="test_run", skip_extraction=True, store_mode="vector")
     logger.info(f"Added test memories successfully: {test_result}")
 
 except Exception as e:

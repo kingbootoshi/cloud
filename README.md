@@ -9,7 +9,13 @@ Cloud acts as the central memory hub for all my AI agents. This is a customized 
 
 The mem0 package included in this repo is a modified version of the mem0 package from the [mem0ai](https://github.com/mem0ai/mem0) repo.
 
-- `/add` allows you to add memories by passing a memory string, plus `agent_id`, `run_id`, `user_id`, and optional `metadata`.
+- `/add` allows you to add memories by passing a memory string, plus `agent_id`, `run_id`, `user_id`, and optional parameters:
+  - `metadata`: Additional information about the memory (timestamps, etc.)
+  - `skip_extraction`: (bool, default=False) If True, bypasses LLM fact-extraction and stores raw content directly
+  - `store_mode`: (str, default="both") Where to store memories - options are "both", "vector", or "graph"
+    - Note: When `skip_extraction=True`, `store_mode` must be "vector" as graph storage requires fact extraction
+    (Skip extraction was created to store raw, un-edited memories in the vector store to keep FULL details, typically used for business or story knowledge for RAG.)
+
 - `/query` allows you to search the stored memories with a query string, plus optional `agent_id`, `run_id`, `user_id`, and `limit`.
 - `/get_all` allows you to retrieve all memories filtered by `agent_id`, `run_id`, and/or `user_id`.
 
@@ -37,7 +43,7 @@ How we treat mem0 functions:
 - Every endpoint except `/ping` requires a header named **`X-Password`**.  
 - The value must match `CLOUD_PASSWORD` from your `.env` file.
 
-**Example Usage:**
+`**Example Usage:**
 
 1. Adding Memories (`/add`):
 ```bash
@@ -52,7 +58,9 @@ curl -X POST "http://127.0.0.1:8000/add" \
     "metadata": {
         "timestamp": "2024-03-20T10:30:00Z",
         "confidence": 0.95
-    }
+    },
+    "skip_extraction": false,
+    "store_mode": "both"
 }'
 ```
 

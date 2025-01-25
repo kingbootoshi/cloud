@@ -67,11 +67,22 @@ class Memory(MemoryBase):
         metadata=None,
         filters=None,
         prompt=None,
+        skip_extraction=False,
+        store_mode="both",
     ):
         """
         Create a new memory, optionally storing user_id/agent_id/run_id or any combo
         in both vector store and graph store.
+
+        :param skip_extraction: (bool) If True, skip LLM-based fact extraction and store raw content to vector only.
+        :param store_mode: (str) one of ["both", "vector", "graph"] determining where to store memories.
         """
+
+        if skip_extraction and store_mode in ["both", "graph"]:
+            # The user specifically requested that if we skip extraction,
+            # we cannot add to graph memory.
+            raise ValueError("Cannot add to graph if skip_extraction=True; please set store_mode='vector'.")
+
         if metadata is None:
             metadata = {}
 
@@ -89,20 +100,48 @@ class Memory(MemoryBase):
         if isinstance(messages, str):
             messages = [{"role": "user", "content": messages}]
 
+        vector_store_result = None
+        graph_result = None
+
         with concurrent.futures.ThreadPoolExecutor() as executor:
-            future1 = executor.submit(self._add_to_vector_store, messages, metadata, filters)
-            future2 = executor.submit(self._add_to_graph, messages, filters)
+            futures = []
 
-            concurrent.futures.wait([future1, future2])
+            # If storing to vector or both, proceed with either raw or extracted approach
+            if store_mode in ["both", "vector"]:
+                if skip_extraction:
+                    f_vector = executor.submit(self._add_raw_to_vector_store, messages, metadata, filters)
+                else:
+                    f_vector = executor.submit(self._add_to_vector_store, messages, metadata, filters)
+                futures.append(f_vector)
 
-            vector_store_result = future1.result()
-            graph_result = future2.result()
+            # If storing to graph or both (and skip_extraction is False), do graph
+            if store_mode in ["both", "graph"] and self.enable_graph:
+                f_graph = executor.submit(self._add_to_graph, messages, filters)
+                futures.append(f_graph)
+
+            concurrent.futures.wait(futures)
+
+            # Gather results
+            for f in futures:
+                if f.exception():
+                    raise f.exception()
+                result = f.result()
+                # Determine which future completed
+                if isinstance(result, list) or (isinstance(result, dict) and "id" in result or "event" in result):
+                    # likely vector store result
+                    vector_store_result = result
+                else:
+                    # likely graph store result
+                    graph_result = result
 
         if self.api_version == "v1.1":
-            return {
-                "results": vector_store_result,
-                "relations": graph_result,
-            }
+            if store_mode in ["graph", "both"] and self.enable_graph:
+                return {
+                    "results": vector_store_result,
+                    "relations": graph_result,
+                }
+            else:
+                return {"results": vector_store_result}
         else:
             warnings.warn(
                 "The current add API output format is deprecated. "
@@ -217,6 +256,29 @@ class Memory(MemoryBase):
 
         capture_event("mem0.add", self, {"version": self.api_version, "keys": list(filters.keys())})
 
+        return returned_memories
+
+    def _add_raw_to_vector_store(self, messages, metadata, filters):
+        """
+        Store raw messages directly to the vector store without LLM-based extraction.
+        """
+        logger.debug("Entering _add_raw_to_vector_store with provided messages.")
+        returned_memories = []
+
+        for msg in messages:
+            # We'll embed the raw text from each message['content']
+            content = msg["content"]
+            existing_embeddings = {content: self.embedding_model.embed(content)}
+            memory_id = self._create_memory(content, existing_embeddings, metadata=metadata)
+            returned_memories.append(
+                {
+                    "id": memory_id,
+                    "memory": content,
+                    "event": "ADD",
+                }
+            )
+
+        capture_event("mem0.add_raw", self, {"version": self.api_version, "keys": list(filters.keys())})
         return returned_memories
 
     def _add_to_graph(self, messages, filters):
