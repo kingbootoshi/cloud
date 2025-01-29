@@ -249,7 +249,7 @@ config = {
     "vector_store": {
         "provider": "qdrant",
             "config": {
-                "collection_name": "test_memory",
+                "collection_name": "test",
                 "url": os.getenv("QDRANT_URL"),
                 "api_key": os.getenv("QDRANT_API_KEY"),
             },
@@ -305,7 +305,7 @@ try:
     logger.info("Starting test memory addition process")
     test_memory_string = format_memories(test_memories)
     logger.debug(f"Formatted test memories: {test_memory_string}")
-    test_result = m.add(test_memory_string, user_id="test_user", agent_id="test_agent", run_id="test_run", skip_extraction=True, store_mode="vector")
+    test_result = m.add(test_memory_string, user_id="test_user", agent_id="test_agent", run_id="test_run")
     logger.info(f"Added test memories successfully: {test_result}")
 
 except Exception as e:

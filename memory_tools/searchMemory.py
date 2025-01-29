@@ -24,7 +24,7 @@ config = {
     "vector_store": {
         "provider": "qdrant",
         "config": {
-            "collection_name": "test_memory",
+            "collection_name": "test",
             "url": os.getenv("QDRANT_URL"),
             "api_key": os.getenv("QDRANT_API_KEY"),
         },

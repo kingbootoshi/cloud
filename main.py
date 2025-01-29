@@ -9,7 +9,6 @@ from datetime import datetime, UTC
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Header, Depends
 from pydantic import BaseModel
-from neo4j import GraphDatabase
 
 # Add the project root to Python path
 sys.path.append(str(Path(__file__).parent))
@@ -129,6 +128,8 @@ class AddRequest(BaseModel):
     run_id: Optional[str] = None
     user_id: Optional[str] = None
     metadata: Optional[Dict[str, Any]] = None
+    skip_extraction: Optional[bool] = False
+    store_mode: Optional[str] = "both"
 
 class QueryRequest(BaseModel):
     query: str
@@ -141,6 +142,27 @@ class GetAllRequest(BaseModel):
     agent_id: Optional[str] = None
     run_id: Optional[str] = None
     user_id: Optional[str] = None
+
+class GetMemoryByIdRequest(BaseModel):
+    memory_id: str
+
+class UpdateMemoryRequest(BaseModel):
+    memory_id: str
+    new_data: str
+
+class DeleteMemoryRequest(BaseModel):
+    memory_id: str
+
+class DeleteAllMemoriesRequest(BaseModel):
+    agent_id: Optional[str] = None
+    run_id: Optional[str] = None
+    user_id: Optional[str] = None
+
+class MemoryHistoryRequest(BaseModel):
+    memory_id: str
+
+class ChatRequest(BaseModel):
+    query: str
 
 @app.get("/ping")
 def ping():
@@ -155,8 +177,10 @@ def add_memory(req: AddRequest, x_password: str = Depends(verify_password)):
       "memories": "combined memory string",
       "agent_id": "quest_boo",
       "run_id": "general_knowledge",
-      "user_id": "123" (optional),
-      "metadata": { ... } (optional)
+      "user_id": "123",
+      "metadata": { ... },
+      "skip_extraction": false,
+      "store_mode": "both"
     }
     """
     try:
@@ -167,7 +191,9 @@ def add_memory(req: AddRequest, x_password: str = Depends(verify_password)):
             "user_id": req.user_id,
             "metadata": req.metadata,
             "memories_count": 1,
-            "memories_preview": [req.memories[:40]]
+            "memories_preview": [req.memories[:40]],
+            "skip_extraction": req.skip_extraction,
+            "store_mode": req.store_mode,
         }
         logger.info(f"Incoming POST request to /add: {json.dumps(request_details, indent=2)}")
 
@@ -178,6 +204,8 @@ def add_memory(req: AddRequest, x_password: str = Depends(verify_password)):
             user_id=req.user_id,
             run_id=req.run_id,
             metadata=req.metadata if req.metadata else {},
+            skip_extraction=req.skip_extraction,
+            store_mode=req.store_mode
         )
         execution_time = (datetime.now() - start_time).total_seconds()
 
@@ -199,10 +227,10 @@ def query_memory(req: QueryRequest, x_password: str = Depends(verify_password)):
     Expects:
     {
       "query": "...",
-      "agent_id": "quest_boo" (optional),
-      "run_id": "general_knowledge" (optional),
-      "user_id": "123" (optional),
-      "limit": 5 (optional)
+      "agent_id": "quest_boo",
+      "run_id": "general_knowledge",
+      "user_id": "123",
+      "limit": 5
     }
     """
     try:
@@ -232,7 +260,7 @@ def query_memory(req: QueryRequest, x_password: str = Depends(verify_password)):
 
         response_details = {
             "execution_time_seconds": execution_time,
-            "results_count": len(result),
+            "results_count": len(result) if isinstance(result, list) else None,
             "results": result
         }
         logger.info(f"Response from /query: {json.dumps(response_details, indent=2)}")
@@ -247,9 +275,9 @@ def get_all_memories(req: GetAllRequest, x_password: str = Depends(verify_passwo
     """
     Expects:
     {
-      "agent_id": "quest_boo" (optional),
-      "run_id": "self_knowledge" (optional),
-      "user_id": "123" (optional)
+      "agent_id": "quest_boo",
+      "run_id": "self_knowledge",
+      "user_id": "123"
     }
     """
     try:
@@ -275,7 +303,7 @@ def get_all_memories(req: GetAllRequest, x_password: str = Depends(verify_passwo
 
         response_details = {
             "execution_time_seconds": execution_time,
-            "memories_count": len(result),
+            "memories_count": len(result) if isinstance(result, list) else None,
             "results": result
         }
         logger.info(f"Response from /get_all: {json.dumps(response_details, indent=2)}")
@@ -283,6 +311,182 @@ def get_all_memories(req: GetAllRequest, x_password: str = Depends(verify_passwo
         return {"status": "success", "results": result}
     except Exception as e:
         logger.error(f"Error getting all memories: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/get")
+def get_memory(req: GetMemoryByIdRequest, x_password: str = Depends(verify_password)):
+    """
+    Expects:
+    {
+      "memory_id": "uuid-string"
+    }
+    """
+    try:
+        logger.info(f"Incoming POST request to /get for memory_id: {req.memory_id}")
+
+        start_time = datetime.now()
+        result = memory_instance.get(req.memory_id)
+        if not result:
+            raise HTTPException(status_code=404, detail="Memory not found")
+        execution_time = (datetime.now() - start_time).total_seconds()
+
+        logger.info(f"Response from /get memory_id {req.memory_id}: {json.dumps(result, indent=2)}")
+
+        return {
+            "status": "success",
+            "execution_time_seconds": execution_time,
+            "memory": result
+        }
+    except Exception as e:
+        logger.error(f"Error getting memory: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/update")
+def update_memory(req: UpdateMemoryRequest, x_password: str = Depends(verify_password)):
+    """
+    Expects:
+    {
+      "memory_id": "uuid-string",
+      "new_data": "updated memory text"
+    }
+    """
+    try:
+        logger.info(f"Incoming POST request to /update memory_id: {req.memory_id}")
+
+        start_time = datetime.now()
+        result = memory_instance.update(req.memory_id, req.new_data)
+        execution_time = (datetime.now() - start_time).total_seconds()
+
+        logger.info(f"Response from /update memory_id {req.memory_id}: {json.dumps(result, indent=2)}")
+
+        return {
+            "status": "success",
+            "execution_time_seconds": execution_time,
+            "result": result
+        }
+    except Exception as e:
+        logger.error(f"Error updating memory: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/delete")
+def delete_memory(req: DeleteMemoryRequest, x_password: str = Depends(verify_password)):
+    """
+    Expects:
+    {
+      "memory_id": "uuid-string"
+    }
+    """
+    try:
+        logger.info(f"Incoming POST request to /delete memory_id: {req.memory_id}")
+
+        start_time = datetime.now()
+        result = memory_instance.delete(req.memory_id)
+        execution_time = (datetime.now() - start_time).total_seconds()
+
+        logger.info(f"Response from /delete memory_id {req.memory_id}: {json.dumps(result, indent=2)}")
+
+        return {
+            "status": "success",
+            "execution_time_seconds": execution_time,
+            "result": result
+        }
+    except Exception as e:
+        logger.error(f"Error deleting memory: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/delete_all")
+def delete_all_memories(req: DeleteAllMemoriesRequest, x_password: str = Depends(verify_password)):
+    """
+    Expects:
+    {
+      "agent_id": "agent_name",
+      "run_id": "run_name",
+      "user_id": "user_id"
+    }
+    - Must specify at least one of agent_id, run_id, or user_id
+    """
+    try:
+        logger.info(f"Incoming POST request to /delete_all with: {req.dict()}")
+
+        start_time = datetime.now()
+        result = memory_instance.delete_all(user_id=req.user_id, agent_id=req.agent_id, run_id=req.run_id)
+        execution_time = (datetime.now() - start_time).total_seconds()
+
+        logger.info(f"Response from /delete_all: {json.dumps(result, indent=2)}")
+
+        return {
+            "status": "success",
+            "execution_time_seconds": execution_time,
+            "result": result
+        }
+    except Exception as e:
+        logger.error(f"Error deleting all memories: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/history")
+def get_memory_history(req: MemoryHistoryRequest, x_password: str = Depends(verify_password)):
+    """
+    Expects:
+    {
+      "memory_id": "uuid-string"
+    }
+    """
+    try:
+        logger.info(f"Incoming POST request to /history memory_id: {req.memory_id}")
+
+        start_time = datetime.now()
+        result = memory_instance.history(req.memory_id)
+        execution_time = (datetime.now() - start_time).total_seconds()
+
+        logger.info(f"Response from /history memory_id {req.memory_id}: {json.dumps(result, indent=2)}")
+
+        return {
+            "status": "success",
+            "execution_time_seconds": execution_time,
+            "history": result
+        }
+    except Exception as e:
+        logger.error(f"Error getting history for memory: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/reset")
+def reset_memories(x_password: str = Depends(verify_password)):
+    """
+    Resets the entire memory store by deleting all vector store items and graph relationships.
+    Use with caution.
+    """
+    try:
+        logger.warning("Incoming POST request to /reset")
+
+        start_time = datetime.now()
+        memory_instance.reset()
+        execution_time = (datetime.now() - start_time).total_seconds()
+
+        logger.info("Memory reset completed successfully.")
+
+        return {
+            "status": "success",
+            "execution_time_seconds": execution_time,
+            "message": "Memory store has been reset successfully."
+        }
+    except Exception as e:
+        logger.error(f"Error resetting memory store: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/chat")
+def chat(req: ChatRequest, x_password: str = Depends(verify_password)):
+    """
+    Endpoint for a future chat interface with the memory system.
+    Currently not implemented.
+    """
+    logger.info(f"Incoming POST request to /chat with query: {req.query}")
+    try:
+        # Attempt to call chat method
+        return memory_instance.chat(req.query)
+    except NotImplementedError:
+        raise HTTPException(status_code=501, detail="Chat feature not implemented yet.")
+    except Exception as e:
+        logger.error(f"Error during chat: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.on_event("startup")
