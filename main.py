@@ -8,6 +8,7 @@ from typing import Any, Dict, List, Optional
 from datetime import datetime, UTC
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Header, Depends
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 # Add the project root to Python path
@@ -121,6 +122,18 @@ config = {
 
 memory_instance = Memory.from_config(config_dict=config)
 app = FastAPI()
+
+# Configure CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    # Allow requests from your Next.js app
+    allow_origins=["http://localhost:3000"],
+    allow_credentials=True,
+    # Allow common HTTP methods
+    allow_methods=["*"],
+    # Allow common headers
+    allow_headers=["*"],
+)
 
 class AddRequest(BaseModel):
     memories: str

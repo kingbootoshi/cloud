@@ -1,0 +1,284 @@
+
+[2025-01-29 15:39:52] === MEMORY SERVER TEST EXECUTION ===
+
+[2025-01-29 15:39:52] Base URL: http://localhost:8000
+
+[2025-01-29 15:39:52] Test Started at: 2025-01-29 15:39:52
+
+[2025-01-29 15:39:52] =====================================
+
+
+[2025-01-29 15:39:52] === Executing: Ping Test ===
+
+[2025-01-29 15:39:52] Endpoint: ping
+
+[2025-01-29 15:39:52] Method: GET
+
+[2025-01-29 15:39:52] Response: {
+  "status": "ok",
+  "message": "Memory server is up and running!"
+}
+
+
+[2025-01-29 15:39:52] === Executing: Add Memory ===
+
+[2025-01-29 15:39:52] Endpoint: add
+
+[2025-01-29 15:39:52] Method: POST
+
+[2025-01-29 15:39:52] Request Data: {
+  "memories": "This is a test memory",
+  "agent_id": "test_agent",
+  "run_id": "test_run",
+  "user_id": "test_user",
+  "metadata": {
+    "test": true
+  },
+  "skip_extraction": false,
+  "store_mode": "both"
+}
+
+[2025-01-29 15:39:59] Response: {
+  "status": "success",
+  "result": {
+    "results": [
+      {
+        "id": "db4848e3-de70-4b8c-b8ec-983b821990c2",
+        "memory": "This is a test memory",
+        "event": "ADD"
+      }
+    ],
+    "relations": {
+      "deleted_entities": [],
+      "added_entities": [
+        [
+          {
+            "source": "test_memory",
+            "relationship": "is_a",
+            "destination": "memory"
+          }
+        ]
+      ]
+    }
+  }
+}
+
+
+[2025-01-29 15:39:59] === Executing: Query Memory ===
+
+[2025-01-29 15:39:59] Endpoint: query
+
+[2025-01-29 15:39:59] Method: POST
+
+[2025-01-29 15:39:59] Request Data: {
+  "query": "test memory",
+  "agent_id": "test_agent",
+  "run_id": "test_run",
+  "user_id": "test_user",
+  "limit": 5
+}
+
+[2025-01-29 15:40:02] Response: {
+  "status": "success",
+  "results": {
+    "results": [
+      {
+        "id": "db4848e3-de70-4b8c-b8ec-983b821990c2",
+        "memory": "This is a test memory",
+        "hash": "9bb7584595ff56ac23ab4b72f8bf21b4",
+        "metadata": {
+          "test": true
+        },
+        "score": 0.6013661,
+        "created_at": "2025-01-29T15:39:56.021023-08:00",
+        "updated_at": null,
+        "user_id": "test_user",
+        "agent_id": "test_agent",
+        "run_id": "test_run"
+      }
+    ],
+    "relations": []
+  }
+}
+
+
+[2025-01-29 15:40:02] === Executing: Get All Memories ===
+
+[2025-01-29 15:40:02] Endpoint: get_all
+
+[2025-01-29 15:40:02] Method: POST
+
+[2025-01-29 15:40:02] Request Data: {
+  "agent_id": "test_agent",
+  "run_id": "test_run",
+  "user_id": "test_user"
+}
+
+[2025-01-29 15:40:02] Response: {
+  "status": "success",
+  "results": {
+    "results": [
+      {
+        "id": "db4848e3-de70-4b8c-b8ec-983b821990c2",
+        "memory": "This is a test memory",
+        "hash": "9bb7584595ff56ac23ab4b72f8bf21b4",
+        "metadata": {
+          "test": true
+        },
+        "created_at": "2025-01-29T15:39:56.021023-08:00",
+        "updated_at": null,
+        "user_id": "test_user",
+        "agent_id": "test_agent",
+        "run_id": "test_run"
+      }
+    ],
+    "relations": [
+      {
+        "source": "test_memory",
+        "relationship": "is_a",
+        "target": "memory"
+      }
+    ]
+  }
+}
+
+
+[2025-01-29 15:40:02] === Executing: Get Memory by ID ===
+
+[2025-01-29 15:40:02] Endpoint: get
+
+[2025-01-29 15:40:02] Method: POST
+
+[2025-01-29 15:40:02] Request Data: {
+  "memory_id": "db4848e3-de70-4b8c-b8ec-983b821990c2"
+}
+
+[2025-01-29 15:40:02] Response: {
+  "status": "success",
+  "execution_time_seconds": 0.650684,
+  "memory": {
+    "id": "db4848e3-de70-4b8c-b8ec-983b821990c2",
+    "memory": "This is a test memory",
+    "hash": "9bb7584595ff56ac23ab4b72f8bf21b4",
+    "metadata": {
+      "test": true
+    },
+    "created_at": "2025-01-29T15:39:56.021023-08:00",
+    "updated_at": null,
+    "user_id": "test_user",
+    "agent_id": "test_agent",
+    "run_id": "test_run"
+  }
+}
+
+
+[2025-01-29 15:40:02] === Executing: Update Memory ===
+
+[2025-01-29 15:40:02] Endpoint: update
+
+[2025-01-29 15:40:02] Method: POST
+
+[2025-01-29 15:40:02] Request Data: {
+  "memory_id": "db4848e3-de70-4b8c-b8ec-983b821990c2",
+  "new_data": "Updated test memory"
+}
+
+[2025-01-29 15:40:03] Response: {
+  "status": "success",
+  "execution_time_seconds": 0.75732,
+  "result": {
+    "message": "Memory updated successfully!"
+  }
+}
+
+
+[2025-01-29 15:40:03] === Executing: Get Memory History ===
+
+[2025-01-29 15:40:03] Endpoint: history
+
+[2025-01-29 15:40:03] Method: POST
+
+[2025-01-29 15:40:03] Request Data: {
+  "memory_id": "db4848e3-de70-4b8c-b8ec-983b821990c2"
+}
+
+[2025-01-29 15:40:03] Response: {
+  "status": "success",
+  "execution_time_seconds": 0.000154,
+  "history": [
+    {
+      "id": "36d8e088-de31-4b9f-8def-762052eae382",
+      "memory_id": "db4848e3-de70-4b8c-b8ec-983b821990c2",
+      "old_memory": null,
+      "new_memory": "This is a test memory",
+      "event": "ADD",
+      "created_at": "2025-01-29T15:39:56.021023-08:00",
+      "updated_at": null
+    },
+    {
+      "id": "750b1f61-62fc-41a6-9ba7-c6da8bc04db9",
+      "memory_id": "db4848e3-de70-4b8c-b8ec-983b821990c2",
+      "old_memory": "This is a test memory",
+      "new_memory": "Updated test memory",
+      "event": "UPDATE",
+      "created_at": "2025-01-29T15:39:56.021023-08:00",
+      "updated_at": "2025-01-29T15:40:03.432454-08:00"
+    }
+  ]
+}
+
+
+[2025-01-29 15:40:03] === Executing: Delete Memory ===
+
+[2025-01-29 15:40:03] Endpoint: delete
+
+[2025-01-29 15:40:03] Method: POST
+
+[2025-01-29 15:40:03] Request Data: {
+  "memory_id": "db4848e3-de70-4b8c-b8ec-983b821990c2"
+}
+
+[2025-01-29 15:40:03] Response: {
+  "status": "success",
+  "execution_time_seconds": 0.338552,
+  "result": {
+    "message": "Memory deleted successfully!"
+  }
+}
+
+
+[2025-01-29 15:40:03] === Executing: Delete All Memories ===
+
+[2025-01-29 15:40:03] Endpoint: delete_all
+
+[2025-01-29 15:40:03] Method: POST
+
+[2025-01-29 15:40:03] Request Data: {
+  "agent_id": "test_agent",
+  "run_id": "test_run",
+  "user_id": "test_user"
+}
+
+[2025-01-29 15:40:04] Response: {
+  "status": "success",
+  "execution_time_seconds": 0.26464,
+  "result": {
+    "message": "Memories deleted successfully!"
+  }
+}
+
+
+[2025-01-29 15:40:04] === Executing: Reset Memory Store ===
+
+[2025-01-29 15:40:05] Reset Response: {
+  "status": "success",
+  "execution_time_seconds": 1.067935,
+  "message": "Memory store has been reset successfully."
+}
+
+
+[2025-01-29 15:40:05] === TEST EXECUTION COMPLETED ===
+
+[2025-01-29 15:40:05] Test Finished at: 2025-01-29 15:40:05
+
+[2025-01-29 15:40:05] ==============================

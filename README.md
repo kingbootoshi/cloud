@@ -18,6 +18,13 @@ The mem0 package included in this repo is a modified version of the mem0 package
 
 - `/query` allows you to search the stored memories with a query string, plus optional `agent_id`, `run_id`, `user_id`, and `limit`.
 - `/get_all` allows you to retrieve all memories filtered by `agent_id`, `run_id`, and/or `user_id`.
+- `/get` retrieves a specific memory by its ID.
+- `/update` allows you to update the content of an existing memory.
+- `/delete` removes a specific memory by its ID.
+- `/delete_all` removes all memories matching the specified filters (`agent_id`, `run_id`, and/or `user_id`).
+- `/history` retrieves the modification history of a specific memory.
+- `/reset` resets the entire memory store (use with caution).
+- `/chat` endpoint reserved for future chat interface implementation.
 
 How we treat mem0 functions:
 - "agent_id" is the name of the agent that is making the memory.
@@ -88,6 +95,65 @@ curl -X POST "http://127.0.0.1:8000/get_all" \
     "run_id": "user_specific",
     "user_id": "user123"
 }'
+```
+
+4. Get Memory by ID (`/get`):
+```bash
+curl -X POST "http://127.0.0.1:8000/get" \
+-H "Content-Type: application/json" \
+-H "X-Password: supersecret" \
+-d '{
+    "memory_id": "efd686f0-ff03-4a55-bcc3-5b5b40a00c67"
+}'
+```
+
+5. Update Memory (`/update`):
+```bash
+curl -X POST "http://127.0.0.1:8000/update" \
+-H "Content-Type: application/json" \
+-H "X-Password: supersecret" \
+-d '{
+    "memory_id": "efd686f0-ff03-4a55-bcc3-5b5b40a00c67",
+    "new_data": "Updated memory content"
+}'
+```
+
+6. Delete Memory (`/delete`):
+```bash
+curl -X POST "http://127.0.0.1:8000/delete" \
+-H "Content-Type: application/json" \
+-H "X-Password: supersecret" \
+-d '{
+    "memory_id": "efd686f0-ff03-4a55-bcc3-5b5b40a00c67"
+}'
+```
+
+7. Delete All Memories (`/delete_all`):
+```bash
+curl -X POST "http://127.0.0.1:8000/delete_all" \
+-H "Content-Type: application/json" \
+-H "X-Password: supersecret" \
+-d '{
+    "agent_id": "assistant_1",
+    "run_id": "user_specific",
+    "user_id": "user123"
+}'
+```
+
+8. Get Memory History (`/history`):
+```bash
+curl -X POST "http://127.0.0.1:8000/history" \
+-H "Content-Type: application/json" \
+-H "X-Password: supersecret" \
+-d '{
+    "memory_id": "efd686f0-ff03-4a55-bcc3-5b5b40a00c67"
+}'
+```
+
+9. Reset Memory Store (`/reset`):
+```bash
+curl -X POST "http://127.0.0.1:8000/reset" \
+-H "X-Password: supersecret"
 ```
 
 Example Response Formats:
@@ -176,6 +242,86 @@ Example Response Formats:
         ],
         "relations": []
     }
+}
+```
+
+4. `/get` Response:
+```json
+{
+    "status": "success",
+    "execution_time_seconds": 0.650684,
+    "memory": {
+        "id": "efd686f0-ff03-4a55-bcc3-5b5b40a00c67",
+        "memory": "This is a test memory",
+        "hash": "7b18682503050e415ea070b73a445e6d",
+        "metadata": {
+            "test": true
+        },
+        "created_at": "2024-12-27T14:47:11.745369-08:00",
+        "updated_at": null,
+        "user_id": "user123",
+        "agent_id": "assistant_1",
+        "run_id": "user_specific"
+    }
+}
+```
+
+5. `/update` Response:
+```json
+{
+    "status": "success",
+    "execution_time_seconds": 0.75732,
+    "result": {
+        "message": "Memory updated successfully!"
+    }
+}
+```
+
+6. `/delete` Response:
+```json
+{
+    "status": "success",
+    "execution_time_seconds": 0.338552,
+    "result": {
+        "message": "Memory deleted successfully!"
+    }
+}
+```
+
+7. `/history` Response:
+```json
+{
+    "status": "success",
+    "execution_time_seconds": 0.000154,
+    "history": [
+        {
+            "id": "36d8e088-de31-4b9f-8def-762052eae382",
+            "memory_id": "efd686f0-ff03-4a55-bcc3-5b5b40a00c67",
+            "old_memory": null,
+            "new_memory": "Initial memory content",
+            "event": "ADD",
+            "created_at": "2024-12-27T14:47:11.745369-08:00",
+            "updated_at": null
+        },
+        {
+            "id": "750b1f61-62fc-41a6-9ba7-c6da8bc04db9",
+            "memory_id": "efd686f0-ff03-4a55-bcc3-5b5b40a00c67",
+            "old_memory": "Initial memory content",
+            "new_memory": "Updated memory content",
+            "event": "UPDATE",
+            "created_at": "2024-12-27T14:47:11.745369-08:00",
+            "updated_at": "2024-12-27T15:40:03.432454-08:00"
+        }
+    ]
+}
+```
+
+8. `/reset` Response:
+```json
+{
+    "status": "success",
+    "execution_time_seconds": 1.067935,
+    "message": "Memory store has been reset successfully."
 }
 ```
 
